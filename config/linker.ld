@@ -1,43 +1,83 @@
 ENTRY(_start);
  
+KERN_BASE  = 0xfffffffa80000000;
+
 SECTIONS {
-    . = 0xfffffffa80000000;
+    . = KERN_BASE + SIZEOF_HEADERS;
 
-    .text : ALIGN(4k) {
-        PROVIDE(__text_start = .);
-        PROVIDE(KERNEL_START = .);
-        *(.init)
-        *(.text .text.*)
-        PROVIDE(__rodata_start = .);
-        *(.rodata .rodata.*)
-        PROVIDE(__text_end = .);
+    PROVIDE(__executable_start = .);
+
+    .hash                   : { *(.hash) }
+    .gnu.hash               : { *(.gnu.hash) }
+    .dynsym                 : { *(.dynsym) }
+    .dynstr                 : { *(.dynstr) }
+    .rela                   : { *(.rela*) }
+    .rodata                 : { *(.rodata .rodata.*) }
+    .note.gnu.build-id      :
+    {
+        PROVIDE(__build_id = .);
+        KEEP(*(.note.gnu.build-id))
+    }
+    .eh_frame_hdr           :
+    {
+        PROVIDE(__eh_frame_hdr = .);
+        *(.eh_frame_hdr)
+    }
+    PROVIDE(__eh_frame = .);
+    .eh_frame               : { KEEP(*(.eh_frame)) }
+    .gcc_except_table       : { KEEP(*(.gcc_except_table)) }
+
+    . += CONSTANT(MAXPAGESIZE);
+
+    .plt                    : { *(.plt) *(.iplt) }
+    .text                   : { *(.text .text.*) }
+    PROVIDE(__etext = .);
+
+    . += CONSTANT(MAXPAGESIZE);
+
+    .tdata                  : { *(.tdata .tdata.*) }
+    PROVIDE(__tdata_start = .);
+    .tbss                   : { *(.tbss .tbss.*) }
+
+    .data.rel.ro            :
+    {
+        *(.data.rel.ro.local .data.rel.ro.local.*)
+        *(.data.rel.ro .data.rel.ro.*)
     }
 
-    .data : ALIGN(4k) {
-        PROVIDE(__data_start = .);  
-        PROVIDE(__global_pointer = .);
-        *(.sdata .sdata.*)     
-        *(.data .data.*)
-        PROVIDE(__data_end = .); 
-    } 
+    .dynamic                : { *(.dynamic) }
 
-    PROVIDE(__bss_start = .);
-    .bss : ALIGN(4k) {
-        *(.sbss .sbss.*);
-        *(.bss .bss.*)
-        PROVIDE(__bss_end = .);
-    }
+    . = DATA_SEGMENT_RELRO_END(0, .);
 
-    .tdata : ALIGN(4k) {
-        PROVIDE(__tdata_start = .);
-        
-        *(.tdata .tdata.* .tbss .tbss.*);
+    .got                    : { *(.got) *(.igot) }
+    .got.plt                : { *(.got.plt) *(.igot.plt) }
+    .data                   : { *(.data .data.*) *(.sdata .sdata.*) }
+    PROVIDE(__global_pointer = .);
+    .bss                    : { *(.sbss .sbss.*) *(.dynbss) *(.bss .bss.*) }
 
-        PROVIDE(__tdata_end = .);
-    }
+    . = DATA_SEGMENT_END(.);
 
-    . = ALIGN(2M);
-    PROVIDE(KERNEL_END = .);
-
-    /DISCARD/ : { *(.eh_frame_hdr .eh_frame) }
+    .comment              0 : { *(.comment) }
+    .debug                0 : { *(.debug) }
+    .debug_abbrev         0 : { *(.debug_abbrev) }
+    .debug_aranges        0 : { *(.debug_aranges) }
+    .debug_frame          0 : { *(.debug_frame) }
+    .debug_funcnames      0 : { *(.debug_funcnames) }
+    .debug_info           0 : { *(.debug_info .gnu.linkonce.wi.*) }
+    .debug_line           0 : { *(.debug_line) }
+    .debug_loc            0 : { *(.debug_loc) }
+    .debug_macinfo        0 : { *(.debug_macinfo) }
+    .debug_pubnames       0 : { *(.debug_pubnames) }
+    .debug_pubtypes       0 : { *(.debug_pubtypes) }
+    .debug_ranges         0 : { *(.debug_ranges) }
+    .debug_sfnames        0 : { *(.debug_sfnames) }
+    .debug_srcinfo        0 : { *(.debug_srcinfo) }
+    .debug_str            0 : { *(.debug_str) }
+    .debug_typenames      0 : { *(.debug_typenames) }
+    .debug_varnames       0 : { *(.debug_varnames) }
+    .debug_weaknames      0 : { *(.debug_weaknames) }
+    .line                 0 : { *(.line) }
+    .shstrtab             0 : { *(.shstrtab) }
+    .strtab               0 : { *(.strtab) }
+    .symtab               0 : { *(.symtab) }
 }
