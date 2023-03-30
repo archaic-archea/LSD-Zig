@@ -5,7 +5,7 @@ const kstdout = @import("./kstdout.zig");
 
 pub export var boot: limine.BootloaderInfoRequest = .{};
 
-export fn kmain() void {
+fn kmain() !void {
     var uart: *volatile serial.Uart16550 = @intToPtr(*volatile serial.Uart16550, 0x1000_0000);
 
     var pot_response = boot.response;
