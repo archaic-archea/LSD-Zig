@@ -1,0 +1,5 @@
+/root
+/zig-cache
+/zig-out
+config/spark-riscv-sbi-release.bin
+debug.log
