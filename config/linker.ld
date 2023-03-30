@@ -1,8 +1,14 @@
-ENTRY(_start);
- 
-KERN_BASE  = 0xfffffffa80000000;
+/*
+ * Copyright (c) xvanc and contributors
+ * SPDX-License-Identifier: BSD-2-Clause
+ */
 
-SECTIONS {
+ENTRY(_start)
+
+KERN_BASE  = 0xffffffff80000000;
+
+SECTIONS
+{
     . = KERN_BASE + SIZEOF_HEADERS;
 
     PROVIDE(__executable_start = .);
@@ -36,7 +42,7 @@ SECTIONS {
     . += CONSTANT(MAXPAGESIZE);
 
     .tdata                  : { *(.tdata .tdata.*) }
-    PROVIDE(__tdata_start = .);
+    PROVIDE(__tdata = .);
     .tbss                   : { *(.tbss .tbss.*) }
 
     .data.rel.ro            :
@@ -52,7 +58,7 @@ SECTIONS {
     .got                    : { *(.got) *(.igot) }
     .got.plt                : { *(.got.plt) *(.igot.plt) }
     .data                   : { *(.data .data.*) *(.sdata .sdata.*) }
-    PROVIDE(__global_pointer = .);
+    PROVIDE(__global_pointer$ = .);
     .bss                    : { *(.sbss .sbss.*) *(.dynbss) *(.bss .bss.*) }
 
     . = DATA_SEGMENT_END(.);

@@ -5,12 +5,8 @@ const kstdout = @import("./kstdout.zig");
 
 pub export var boot: limine.BootloaderInfoRequest = .{};
 
-fn kmain() !u8 {
+export fn kmain() void {
     var uart: *volatile serial.Uart16550 = @intToPtr(*volatile serial.Uart16550, 0x1000_0000);
-    var kern_stdout: kstdout.Kstdout = .{};
-    var stdout = kern_stdout.writer();
-
-    try stdout.print("foo {s}", .{"bar"});
 
     var pot_response = boot.response;
 
@@ -25,10 +21,26 @@ fn kmain() !u8 {
 }
 
 export fn kentry() void {
-    var uart: *volatile serial.Uart16550 = @intToPtr(*volatile serial.Uart16550, 0x1000_0000);
-    var result = kmain() catch 0;
+    switch (@typeInfo(@typeInfo(@TypeOf(kmain)).Fn.return_type.?)) {
+        .NoReturn => {
+            kmain();
+        },
+        .Void => {
+            kmain();
+        },
+        .ErrorUnion => {
+            const result = kmain() catch |err| {
+                var kern_out: kstdout.Kstdout = .{};
+                var kout = kern_out.writer();
 
-    if (result == 0) {
-        uart.write_string("KERNEL RETURNED WITH CODE 0");
+                kout.print("\nError: {s}\n", .{@errorName(err)});
+                if (@errorReturnTrace()) |_| {}
+            };
+            switch (@typeInfo(@TypeOf(result))) {
+                .Void => {},
+                else => @compileError("Bad return type"),
+            }
+        },
+        else => @compileError("Bad return type"),
     }
 }

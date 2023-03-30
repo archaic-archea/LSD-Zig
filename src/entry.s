@@ -1,19 +1,15 @@
+.section .text
 .option norvc
  
 .type start, @function
 .global _start
 _start:
 	.cfi_startproc
- 
-    .option push
-    .option norelax
-	la gp, __global_pointer
-    .option pop
 
-    la tp, __tdata_start
+    la tp, __tdata
  
 	/* Jump to kernel! */
-	j kentry
+	tail kentry
  
 	.cfi_endproc
  
