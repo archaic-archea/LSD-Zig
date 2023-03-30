@@ -1,4 +1,5 @@
 pub const Uart16550 = extern struct {
+    /// data line, used for input and output
     data: u8,
     int_enable: u8,
     int_id_fifo_ctrl: u8,
@@ -18,15 +19,3 @@ pub const Uart16550 = extern struct {
         }
     }
 };
-
-//#[repr(C)]
-//pub struct Uart16550 {
-//data_register: Volatile<u8>,
-//interrupt_enable: Volatile<u8>,
-//int_id_fifo_control: Volatile<u8>,
-//line_control: Volatile<u8>,
-//modem_control: Volatile<u8>,
-//line_status: Volatile<u8>,
-//modem_status: Volatile<u8>,
-//scratch: Volatile<u8>,
-//}

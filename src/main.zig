@@ -2,30 +2,32 @@ const std = @import("std");
 const serial = @import("./serial.zig");
 const limine = @import("./limine.zig");
 const kstdout = @import("./kstdout.zig");
+const memory = @import("./memory/memory.zig");
 
 pub export var boot: limine.BootloaderInfoRequest = .{};
+pub export var hhdm: limine.HhdmRequest = .{};
 
 fn kmain() !void {
-    var uart: *volatile serial.Uart16550 = @intToPtr(*volatile serial.Uart16550, 0x1000_0000);
+    // Initialize kernel output
+    var kern_out: kstdout.Kstdout = .{};
+    var kout = kern_out.writer();
 
-    var pot_response = boot.response;
+    var bootresponse = boot.response.?;
+    try kout.print("Booted with: {s} v{s}\n", .{ bootresponse.name, bootresponse.version });
 
-    if (pot_response) |response| {
-        _ = response;
-        uart.write_string("boot info success");
-    } else {
-        uart.write_string("boot info failure");
-    }
+    var hhdmresponse = hhdm.response.?;
+    try kout.print("HHDM offset: 0x{x}\n", .{hhdmresponse.offset});
 
     while (true) {}
 }
 
+/// kernel wrapper, handles any errors produced by main function
 export fn kentry() void {
     var kern_out: kstdout.Kstdout = .{};
     var kout = kern_out.writer();
 
     kmain() catch |err| {
-        kout.print("\nError: {s}\n", .{@errorName(err)});
+        kout.print("\nError: {s}\n", .{@errorName(err)}) catch {};
         if (@errorReturnTrace()) |_| {}
     };
 }
