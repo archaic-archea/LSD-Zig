@@ -21,26 +21,11 @@ export fn kmain() void {
 }
 
 export fn kentry() void {
-    switch (@typeInfo(@typeInfo(@TypeOf(kmain)).Fn.return_type.?)) {
-        .NoReturn => {
-            kmain();
-        },
-        .Void => {
-            kmain();
-        },
-        .ErrorUnion => {
-            const result = kmain() catch |err| {
-                var kern_out: kstdout.Kstdout = .{};
-                var kout = kern_out.writer();
+    var kern_out: kstdout.Kstdout = .{};
+    var kout = kern_out.writer();
 
-                kout.print("\nError: {s}\n", .{@errorName(err)});
-                if (@errorReturnTrace()) |_| {}
-            };
-            switch (@typeInfo(@TypeOf(result))) {
-                .Void => {},
-                else => @compileError("Bad return type"),
-            }
-        },
-        else => @compileError("Bad return type"),
-    }
+    kmain() catch |err| {
+        kout.print("\nError: {s}\n", .{@errorName(err)});
+        if (@errorReturnTrace()) |_| {}
+    };
 }
