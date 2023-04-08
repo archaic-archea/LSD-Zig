@@ -10,7 +10,13 @@ _start:
  
 	/* Jump to kernel! */
 	tail kentry
+
+	j hlt_loop
  
 	.cfi_endproc
+
+hlt_loop:
+	wfi
+	j hlt_loop
  
 .end

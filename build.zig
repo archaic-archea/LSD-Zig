@@ -41,6 +41,7 @@ pub fn build(b: *std.Build) !void {
     kernel.setLinkerScriptPath(.{ .path = "config/linker.ld" });
     kernel.code_model = .medium;
     kernel.rdynamic = true;
+    kernel.pie = true;
 
     _ = try stdout.write("Building kernel\n");
     kernel.install();
