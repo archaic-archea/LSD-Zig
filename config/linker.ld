@@ -41,8 +41,9 @@ SECTIONS
 
     . += CONSTANT(MAXPAGESIZE);
 
-    .tdata                  : { *(.tdata .tdata.*) }
-    PROVIDE(__tdata = .);
+    PROVIDE(__tdata_start = .);
+    .tdata                  : ALIGN(4096) { *(.tdata .tdata.*) }
+    PROVIDE(__tdata_end = .);
     .tbss                   : { *(.tbss .tbss.*) }
 
     .data.rel.ro            :

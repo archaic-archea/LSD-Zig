@@ -1,7 +1,12 @@
 const std = @import("std");
 const kstdout = @import("../kstdout.zig");
 
-pub const FreeEntry = struct {
+pub const ClaimErr = error{
+    NoContiguous,
+    NoEntry,
+};
+
+pub const FreeEntry = extern struct {
     prev: ?*Page,
     next: ?*Page,
 
@@ -24,9 +29,9 @@ pub const FreeEntry = struct {
     }
 };
 
-pub const Page = union {
+pub const Page = extern union {
     entry: FreeEntry,
-    data: u4096,
+    data: [4096]u8,
 };
 
 pub const FreeList = struct {
@@ -98,6 +103,16 @@ pub const FreeList = struct {
         prev_entry.next = base_ptr;
     }
 
+    pub fn push_sec_org(self: *FreeList, base: *void, frames: u64) void {
+        var base_int = @ptrToInt(base);
+
+        for (0..frames) |frame| {
+            var addr = @intToPtr(*void, base_int + frame * 4096);
+
+            self.push_org(addr);
+        }
+    }
+
     /// Index forward, from the head
     pub fn indexf(self: *FreeList, idx: u64) ?*Page {
         // Check that the index isnt more than the length
@@ -142,26 +157,37 @@ pub const FreeList = struct {
         return .{ .forward = forward, .current = self.indexf(idx).? };
     }
 
+    /// Fails after 105 runs
     /// Claim a single frame of memory
-    pub fn claim(self: *FreeList) ?*void {
+    pub fn claim(self: *FreeList) ClaimErr!*void {
+        var kstd = kstdout.Kstdout{};
+        var kout = kstd.writer();
+        _ = kout;
+
         var iter = self.iterf();
 
         while (iter.next()) |entry| {
-            var prev = entry.prev;
-            var next = entry.next;
+            var prev = entry.entry.prev;
+            var next = entry.entry.next;
 
             if (prev) |nonnull_prev| {
-                nonnull_prev.next = next;
+                if (@ptrToInt(nonnull_prev) > 0x80000000) {
+                    nonnull_prev.entry.next = next;
+                }
             }
 
             if (next) |nonnull_next| {
-                nonnull_next.prev = prev;
+                if (@ptrToInt(nonnull_next) > 0x80000000) {
+                    nonnull_next.entry.prev = prev;
+                }
             }
 
-            return @ptrCast(*void, entry);
+            var ret = @ptrCast(*void, @alignCast(16, entry));
+
+            return ret;
         }
 
-        return null;
+        return ClaimErr.NoEntry;
     }
 
     pub fn grab_stitch(self: *FreeList, idx: u64) ?*void {
@@ -184,7 +210,7 @@ pub const FreeList = struct {
     }
 
     /// Claim a contiguous section of memory of a specific frame length
-    pub fn contiguous_claim(self: *FreeList, frames: u64) ?[*]void {
+    pub fn contiguous_claim(self: *FreeList, frames: u64) ClaimErr!*void {
         var iter = self.iterf();
 
         var cur_base = iter.next();
@@ -213,13 +239,13 @@ pub const FreeList = struct {
                     }
                 }
 
-                return @ptrCast([*]void, cur_base);
+                return @ptrCast(*void, @alignCast(16, cur_base));
             }
 
             prev_base = entry;
         }
 
-        return null;
+        return ClaimErr.NoContiguous;
     }
 };
 
@@ -259,8 +285,49 @@ pub const FreeIter = struct {
     }
 };
 
-pub var FREE_MEM = FreeList{
-    .head = null,
-    .tail = null,
-    .len = 0,
+pub var FREE_MEM = PmmMutex{
+    .data = FreeList{
+        .head = null,
+        .tail = null,
+        .len = 0,
+    },
+    .claimed = false,
+};
+
+pub const PmmMutex = struct {
+    data: FreeList,
+    claimed: bool,
+
+    pub fn lock(self: *PmmMutex) PmmMutexGuard {
+        while (self.claimed) {}
+        self.claimed = true;
+
+        return PmmMutexGuard{
+            .mutex = self,
+        };
+    }
+
+    pub fn lockOrPanic(self: *PmmMutex) PmmMutexGuard {
+        if (self.claimed) {
+            @panic("PMM ALREADY LOCKED");
+        }
+
+        self.claimed = true;
+
+        return PmmMutexGuard{
+            .mutex = self,
+        };
+    }
+};
+
+pub const PmmMutexGuard = struct {
+    mutex: *PmmMutex,
+
+    pub fn unlock(self: *PmmMutexGuard) void {
+        self.mutex.claimed = false;
+    }
+
+    pub fn deref(self: *PmmMutexGuard) *FreeList {
+        return &self.mutex.*.data;
+    }
 };
